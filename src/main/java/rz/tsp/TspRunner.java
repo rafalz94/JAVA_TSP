@@ -19,6 +19,7 @@ import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
 import io.jenetics.engine.EvolutionStatistics;
+import io.jenetics.Optimize;
 import io.jenetics.util.ISeq;
 
 @Component
@@ -39,13 +40,13 @@ public class TspRunner implements CommandLineRunner {
         }
     }
 
-    private final List<City> CITIES = new ArrayList<>();
+    private final List<City> cities = new ArrayList<>();
 
     private double calculateDistance(final ISeq<Integer> route) {
         double distance = 0.0;
         for (int i = 0; i < route.size(); ++i) {
-            final City start = CITIES.get(route.get(i));
-            final City end = CITIES.get(route.get((i + 1) % route.size()));
+            final City start = cities.get(route.get(i));
+            final City end = cities.get(route.get((i + 1) % route.size()));
             distance += start.distance(end);
         }
         return distance;
@@ -55,31 +56,31 @@ public class TspRunner implements CommandLineRunner {
     public void run(String... args) throws Exception {
         System.out.println("Generowanie " + NUM_CITIES + " losowych miast...");
 
-        final RandomGenerator random = RandomGenerator.getDefault();
+        final long seed = System.currentTimeMillis();
+        System.out.println("Random Seed: " + seed);
+        final RandomGenerator random = new java.util.Random(seed);
 
         for (int i = 0; i < NUM_CITIES; ++i) {
-            CITIES.add(new City(
+            cities.add(new City(
                     random.nextDouble(100.0),
-                    random.nextDouble(100.0)
-            ));
+                    random.nextDouble(100.0)));
         }
-        CITIES.forEach(System.out::println);
+        cities.forEach(System.out::println);
 
         final Codec<ISeq<Integer>, EnumGene<Integer>> CODEC = Codec.of(
                 Genotype.of(PermutationChromosome.ofInteger(NUM_CITIES)),
                 genotype -> genotype.chromosome().stream()
                         .map(EnumGene::allele)
-                        .collect(ISeq.toISeq())
-        );
+                        .collect(ISeq.toISeq()));
 
         final Engine<EnumGene<Integer>, Double> engine = Engine
                 .builder(this::calculateDistance, CODEC)
                 .populationSize(POP_SIZE)
+                .optimize(Optimize.MINIMUM)
                 .selector(new TournamentSelector<>(TOURNAMENT_SIZE))
                 .alterers(
                         new PartiallyMatchedCrossover<>(CROSSOVER_PROB),
-                        new SwapMutator<>(MUTATION_PROB)
-                )
+                        new SwapMutator<>(MUTATION_PROB))
                 .build();
 
         final EvolutionStatistics<Double, ?> statistics = EvolutionStatistics.ofNumber();
@@ -94,8 +95,7 @@ public class TspRunner implements CommandLineRunner {
                         System.out.printf(
                                 "Generacja: %d, Najlepszy dystans: %.4f%n",
                                 r.generation(),
-                                r.bestFitness()
-                        );
+                                r.bestFitness());
                     }
                 })
                 .collect(EvolutionResult.toBestPhenotype());
@@ -113,4 +113,3 @@ public class TspRunner implements CommandLineRunner {
                 .collect(Collectors.joining(" -> ")));
     }
 }
-
