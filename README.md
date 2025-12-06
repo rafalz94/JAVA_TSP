@@ -42,20 +42,31 @@ Or build the JAR and run it:
 java -jar target/TSP-0.0.1-SNAPSHOT.jar
 ```
 
-## Example Output
 
-```text
-Generowanie 20 losowych miast...
-Random Seed: 1763850708497
-...
-Uruchamianie ewolucji...
-Generacja: 50, Najlepszy dystans: 553.3097
-...
-Generacja: 500, Najlepszy dystans: 496.4761
+## Visualization
 
-Ewolucja zakończona.
-Najlepsze znalezione rozwiązanie:
-Dystans: 493.5507
-Trasa (kolejność miast):
-2 -> 13 -> 15 -> 14 -> 6 -> 10 -> 11 -> 1 -> 3 -> 17 -> 12 -> 9 -> 16 -> 19 -> 0 -> 7 -> 4 -> 18 -> 5 -> 8
+The application saves the best route and city coordinates to a JSON file, which can be visualized using the provided Python script.
+
+### 1. Run the Java Application
+First, run the application as described above. Upon completion, it will generate a results file:
+- `target/tsp_result.json`
+
+### 2. Run the Plotting Script
+A Python script `plot_tsp.py` is included to generate a visual representation of the tour.
+
+**Prerequisites:**
+- Python 3.x
+- Matplotlib (`pip install matplotlib`)
+
+**Command:**
+```bash
+python plot_tsp.py
 ```
+
+This will:
+1.  Read the data from `target/tsp_result.json`.
+2.  Generate a route plot.
+3.  Save the image to `target/tsp_plot.png`.
+
+![TSP Visualization Example](tsp_plot_example.png) *(Note: this is a placeholder path, you can check target/tsp_plot.png after running)*
+
