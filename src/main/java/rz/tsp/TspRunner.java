@@ -18,7 +18,7 @@ import io.jenetics.TournamentSelector;
 import io.jenetics.engine.Codec;
 import io.jenetics.engine.Engine;
 import io.jenetics.engine.EvolutionResult;
-import io.jenetics.engine.EvolutionStatistics;
+
 import io.jenetics.Optimize;
 import io.jenetics.util.ISeq;
 
@@ -83,33 +83,99 @@ public class TspRunner implements CommandLineRunner {
                         new SwapMutator<>(MUTATION_PROB))
                 .build();
 
-        final EvolutionStatistics<Double, ?> statistics = EvolutionStatistics.ofNumber();
+        System.out.println("\nUruchamianie ewolucji (10 uruchomień)...");
 
-        System.out.println("\nUruchamianie ewolucji...");
+        Phenotype<EnumGene<Integer>, Double> globalBest = null;
+        List<List<Double>> allRunsHistory = new ArrayList<>();
+        int NUM_RUNS = 10;
 
-        final Phenotype<EnumGene<Integer>, Double> bestResult = engine.stream()
-                .limit(MAX_GENERATIONS)
-                .peek(statistics)
-                .peek(r -> {
-                    if (r.generation() % 50 == 0) {
-                        System.out.printf(
-                                "Generacja: %d, Najlepszy dystans: %.4f%n",
-                                r.generation(),
-                                r.bestFitness());
-                    }
-                })
-                .collect(EvolutionResult.toBestPhenotype());
+        for (int i = 0; i < NUM_RUNS; i++) {
+            List<Double> currentRunHistory = new ArrayList<>();
+            final Phenotype<EnumGene<Integer>, Double> result = engine.stream()
+                    .limit(MAX_GENERATIONS)
+                    .peek(r -> currentRunHistory.add(r.bestFitness()))
+                    .collect(EvolutionResult.toBestPhenotype());
+
+            allRunsHistory.add(currentRunHistory);
+
+            if (globalBest == null || result.fitness() < globalBest.fitness()) {
+                globalBest = result;
+            }
+            System.out.printf("Uruchomienie %d: Najlepszy dystans: %.4f%n", i + 1, result.fitness());
+        }
 
         System.out.println("\nEwolucja zakończona.");
-        System.out.println("Statystyki:");
-        System.out.println(statistics);
-        System.out.println("\nNajlepsze znalezione rozwiązanie:");
-        System.out.printf("Dystans: %.4f%n", bestResult.fitness());
-        System.out.println("Trasa (kolejność miast):");
+        if (globalBest != null) {
+            System.out.println("\nNajlepsze znalezione rozwiązanie (globalnie):");
+            System.out.printf("Dystans: %.4f%n", globalBest.fitness());
+            System.out.println("Trasa (kolejność miast):");
 
-        System.out.println(bestResult.genotype().chromosome().stream()
-                .map(EnumGene::allele)
-                .map(Object::toString)
-                .collect(Collectors.joining(" -> ")));
+            System.out.println(globalBest.genotype().chromosome().stream()
+                    .map(EnumGene::allele)
+                    .map(Object::toString)
+                    .collect(Collectors.joining(" -> ")));
+
+            saveResults(cities, globalBest.genotype().chromosome().stream()
+                    .map(EnumGene::allele)
+                    .collect(ISeq.toISeq()), globalBest.fitness(), allRunsHistory);
+        } else {
+            System.out.println("Nie znaleziono rozwiązania.");
+        }
+    }
+
+    private void saveResults(List<City> cities, ISeq<Integer> route, double distance, List<List<Double>> history) {
+        java.io.File file = new java.io.File("target/tsp_result.json");
+        try {
+            if (file.getParentFile() != null) {
+                file.getParentFile().mkdirs();
+            }
+            try (java.io.FileWriter writer = new java.io.FileWriter(file)) {
+                StringBuilder json = new StringBuilder();
+                json.append("{\n");
+                json.append("  \"distance\": ").append(String.format(java.util.Locale.US, "%.4f", distance))
+                        .append(",\n");
+
+                json.append("  \"cities\": [\n");
+                for (int i = 0; i < cities.size(); i++) {
+                    City c = cities.get(i);
+                    json.append(String.format(java.util.Locale.US, "    {\"x\": %.4f, \"y\": %.4f}", c.x(), c.y()));
+                    if (i < cities.size() - 1)
+                        json.append(",");
+                    json.append("\n");
+                }
+                json.append("  ],\n");
+
+                json.append("  \"route\": [");
+                for (int i = 0; i < route.size(); i++) {
+                    json.append(route.get(i));
+                    if (i < route.size() - 1)
+                        json.append(", ");
+                }
+                json.append("],\n");
+
+                json.append("  \"history\": [\n");
+                for (int i = 0; i < history.size(); i++) {
+                    json.append("    [");
+                    List<Double> run = history.get(i);
+                    for (int j = 0; j < run.size(); j++) {
+                        json.append(String.format(java.util.Locale.US, "%.4f", run.get(j)));
+                        if (j < run.size() - 1)
+                            json.append(", ");
+                    }
+                    json.append("]");
+                    if (i < history.size() - 1)
+                        json.append(",");
+                    json.append("\n");
+                }
+                json.append("  ]\n");
+
+                json.append("}");
+
+                writer.write(json.toString());
+                System.out.println("\nWyniki zapisano do pliku " + file.getPath());
+            }
+        } catch (java.io.IOException e) {
+            System.err.println("Błąd podczas zapisywania wyników: " + e.getMessage());
+        }
     }
 }
