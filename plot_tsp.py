@@ -59,7 +59,7 @@ def plot_tsp():
         
     plt.savefig(output_file)
     print(f"Plot saved to {output_file}")
-    # plt.show() # Uncomment to show the plot window
+    plt.show() # Uncomment to show the plot window
 
 if __name__ == "__main__":
     plot_tsp()

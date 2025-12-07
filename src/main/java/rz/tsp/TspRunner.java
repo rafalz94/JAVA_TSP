@@ -31,6 +31,7 @@ public class TspRunner implements CommandLineRunner {
     private static final double CROSSOVER_PROB = 0.7;
     private static final double MUTATION_PROB = 0.2;
     private static final int TOURNAMENT_SIZE = 3;
+    private static final int NUM_RUNS = 5;
 
     private record City(double x, double y) {
         double distance(City other) {
@@ -83,11 +84,10 @@ public class TspRunner implements CommandLineRunner {
                         new SwapMutator<>(MUTATION_PROB))
                 .build();
 
-        System.out.println("\nUruchamianie ewolucji (10 uruchomień)...");
+        System.out.println("\nUruchamianie ewolucji...");
 
         Phenotype<EnumGene<Integer>, Double> globalBest = null;
         List<List<Double>> allRunsHistory = new ArrayList<>();
-        int NUM_RUNS = 10;
 
         for (int i = 0; i < NUM_RUNS; i++) {
             List<Double> currentRunHistory = new ArrayList<>();
@@ -105,22 +105,18 @@ public class TspRunner implements CommandLineRunner {
         }
 
         System.out.println("\nEwolucja zakończona.");
-        if (globalBest != null) {
-            System.out.println("\nNajlepsze znalezione rozwiązanie (globalnie):");
-            System.out.printf("Dystans: %.4f%n", globalBest.fitness());
-            System.out.println("Trasa (kolejność miast):");
+        System.out.println("\nNajlepsze znalezione rozwiązanie (globalnie):");
+        System.out.printf("Dystans: %.4f%n", globalBest.fitness());
+        System.out.println("Trasa (kolejność miast):");
 
-            System.out.println(globalBest.genotype().chromosome().stream()
-                    .map(EnumGene::allele)
-                    .map(Object::toString)
-                    .collect(Collectors.joining(" -> ")));
+        System.out.println(globalBest.genotype().chromosome().stream()
+                .map(EnumGene::allele)
+                .map(Object::toString)
+                .collect(Collectors.joining(" -> ")));
 
-            saveResults(cities, globalBest.genotype().chromosome().stream()
-                    .map(EnumGene::allele)
-                    .collect(ISeq.toISeq()), globalBest.fitness(), allRunsHistory);
-        } else {
-            System.out.println("Nie znaleziono rozwiązania.");
-        }
+        saveResults(cities, globalBest.genotype().chromosome().stream()
+                .map(EnumGene::allele)
+                .collect(ISeq.toISeq()), globalBest.fitness(), allRunsHistory);
     }
 
     private void saveResults(List<City> cities, ISeq<Integer> route, double distance, List<List<Double>> history) {
